@@ -1,14 +1,9 @@
 const router = require('express').Router();
 const { handleIncomingMessage } = require('../services/messageHandler');
-const { WHATSAPP_VERIFY_TOKEN } = require('../config/env');
 
-const VERIFY_TOKEN = WHATSAPP_VERIFY_TOKEN;
+const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN;
 
 router.get('/webhook', (req, res) => {
-  if (!VERIFY_TOKEN) {
-    return res.status(500).send('WHATSAPP_VERIFY_TOKEN not configured');
-  }
-
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
@@ -23,7 +18,16 @@ router.get('/webhook', (req, res) => {
 
 router.post('/webhook', async (req, res) => {
   try {
-    await handleIncomingMessage(req.body);
+    const result = await handleIncomingMessage(req.body);
+    if (result) {
+      console.log('--- RESPOSTA PRO CLIENTE ---');
+      console.log(result.responseText);
+      if (result.pixMessage) {
+        console.log('--- PIX ---');
+        console.log(result.pixMessage);
+      }
+      console.log('---------------------------');
+    }
   } catch (err) {
     console.error('Error handling message:', err);
   }
