@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const { handleIncomingMessage } = require('../services/messageHandler');
+const { sendMessage } = require('../services/whatsappService');
 
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN;
 
@@ -19,12 +20,16 @@ router.get('/webhook', (req, res) => {
 router.post('/webhook', async (req, res) => {
   try {
     const result = await handleIncomingMessage(req.body);
-    if (result) {
+    if (result && result.customer?.phone) {
       console.log('--- RESPOSTA PRO CLIENTE ---');
       console.log(result.responseText);
+      if (result.responseText) {
+        await sendMessage(result.customer.phone, result.responseText);
+      }
       if (result.pixMessage) {
         console.log('--- PIX ---');
         console.log(result.pixMessage);
+        await sendMessage(result.customer.phone, result.pixMessage);
       }
       console.log('---------------------------');
     }

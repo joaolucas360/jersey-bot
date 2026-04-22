@@ -1,6 +1,8 @@
 const db = require('../config/db');
-const { updateOrderStatus, getOrder, decreaseStock } = require('./orderService');
+const { updateOrderStatus, getOrder } = require('./orderService');
 const { updateConversation } = require('./conversationService');
+const { sendMessage } = require('./whatsappService');
+const { ensureDeliveryForOrder } = require('./deliveryService');
 
 async function confirmPayment(orderId) {
   const order = await getOrder(orderId);
@@ -17,7 +19,7 @@ async function confirmPayment(orderId) {
   );
 
   await updateOrderStatus(orderId, 'paid');
-  await decreaseStock(order.product_id);
+  await ensureDeliveryForOrder(orderId);
 
   const convResult = await db.query(
     `SELECT * FROM conversations WHERE customer_id = $1`,
@@ -32,6 +34,20 @@ async function confirmPayment(orderId) {
   }
 
   console.log(`Payment confirmed for order ${orderId} | Customer: ${order.phone}`);
+
+  const amount = Number.parseFloat(order.total).toFixed(2);
+  const confirmationText =
+    `Pagamento confirmado, ${order.product_name} foi aprovado! ✅\n\n` +
+    `Pedido: #${orderId}\n` +
+    `Produto: ${order.product_name}\n` +
+    `Valor: R$ ${amount}\n\n` +
+    `Seu pedido ja entrou em separacao e te avisamos por aqui sobre o envio.`;
+
+  try {
+    await sendMessage(order.phone, confirmationText);
+  } catch (err) {
+    console.error(`Erro ao enviar confirmacao WhatsApp do pedido ${orderId}:`, err.message);
+  }
 
   return {
     order_id: orderId,
