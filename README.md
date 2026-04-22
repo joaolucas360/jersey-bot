@@ -46,7 +46,7 @@ Principais:
 - `DATABASE_URL_DIRECT`: opcional, fallback para conexão direta
 - `DB_SSL`: habilita SSL (default `true`)
 - `WHATSAPP_VERIFY_TOKEN`: token de validação do webhook
-- `GROQ_API_KEY` e `GEMINI_API_KEY`: chaves dos provedores de IA
+- `GROQ_API_KEY`: chave do provedor de IA
 
 ## Segurança
 
