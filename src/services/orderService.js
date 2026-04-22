@@ -1,7 +1,6 @@
 const db = require('../config/db');
 
 async function createOrder(customerId, productId, size) {
-  // Busca o produto
   const productResult = await db.query(
     `SELECT * FROM products WHERE id = $1 AND active = true AND stock > 0`,
     [productId]
@@ -13,7 +12,6 @@ async function createOrder(customerId, productId, size) {
 
   const product = productResult.rows[0];
 
-  // Cria o pedido
   const orderResult = await db.query(
     `INSERT INTO orders (customer_id, status, total) VALUES ($1, 'pending', $2) RETURNING *`,
     [customerId, product.price]
@@ -21,7 +19,6 @@ async function createOrder(customerId, productId, size) {
 
   const order = orderResult.rows[0];
 
-  // Cria o item do pedido
   await db.query(
     `INSERT INTO order_items (order_id, product_id, quantity, unit_price) VALUES ($1, $2, 1, $3)`,
     [order.id, productId, product.price]
@@ -34,7 +31,7 @@ async function createOrder(customerId, productId, size) {
 
 async function getOrder(orderId) {
   const result = await db.query(
-    `SELECT o.*, c.phone, p.name as product_name, oi.unit_price, oi.quantity
+    `SELECT o.*, c.phone, c.id as customer_id, p.name as product_name, p.id as product_id, oi.unit_price, oi.quantity
      FROM orders o
      JOIN customers c ON c.id = o.customer_id
      JOIN order_items oi ON oi.order_id = o.id
@@ -52,4 +49,17 @@ async function updateOrderStatus(orderId, status) {
   );
 }
 
-module.exports = { createOrder, getOrder, updateOrderStatus };
+async function decreaseStock(productId) {
+  const result = await db.query(
+    `UPDATE products SET stock = stock - 1 WHERE id = $1 AND stock > 0 RETURNING stock`,
+    [productId]
+  );
+
+  if (result.rows.length === 0) {
+    throw new Error('Estoque insuficiente');
+  }
+
+  console.log(`Stock updated | Product: ${productId} | Remaining: ${result.rows[0].stock}`);
+}
+
+module.exports = { createOrder, getOrder, updateOrderStatus, decreaseStock };
